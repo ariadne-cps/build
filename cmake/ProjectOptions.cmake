@@ -1,6 +1,6 @@
 include_guard(GLOBAL)
 
-if(NOT TARGET ariadne-cmake)
+if(NOT TARGET ariadne-build)
     add_library(ariadne-cmake INTERFACE)
 endif()
 

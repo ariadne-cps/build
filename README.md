@@ -1,4 +1,4 @@
-# Ariadne CMake
+# Ariadne Build
 
 Shared **CMake build infrastructure** for the [Ariadne repository structure](https://github.com/ariadne-cps/ariadne/blob/main/doc/structure.md).
 Use this repository as a pinned Git submodule; it provides reusable build
@@ -24,14 +24,13 @@ The `GCCCodeCoverage.cmake` and `LLVMCodeCoverage.cmake` modules provide
 compiler-specific coverage implementations; `Uninstall.cmake.in` is the
 template used for uninstalling a project.
 
-`ss/cma` is the canonical checkout path for the `cmake` submodule.
-The only shared infrastructure target is `ariadne-cmake`; no former
-`ariadne-configuration` compatibility target is provided.
+`ss/bui` is the canonical checkout path for the `build` submodule.
+The only shared build-infrastructure target is `ariadne-build`.
 
 ## CMake use
 
 Projects include `cmake/ProjectOptions.cmake` via their pinned
-`ss/cma` gitlink and call `setup_project()`. Submodule directories use short
+`ss/bui` gitlink and call `setup_project()`. Submodule directories use short
 checkout codes such as `ss/mac` for `macro`, while CMake dependency checks use
 full logical repository names. `ariadne_add_submodule(macro)` resolves the
 checkout directory from `.gitmodules` and adds the dependency. Both the
@@ -68,7 +67,7 @@ tests.
 For standalone API documentation, after the project targets have been set up:
 
 ```cmake
-include("${PROJECT_SOURCE_DIR}/ss/cma/cmake/UseDoxygen.cmake")
+include("${PROJECT_SOURCE_DIR}/ss/bui/cmake/UseDoxygen.cmake")
 ariadne_setup_documentation(
   INPUT "${PROJECT_SOURCE_DIR}/include" "${PROJECT_SOURCE_DIR}/src"
 )
@@ -94,10 +93,10 @@ The `doc-pdf` target additionally requires a working TeX installation and
 
 ## Optional sccache in GitHub Actions
 
-The compiler cache is optional. After initializing the pinned `ss/cma`
+The compiler cache is optional. After initializing the pinned `ss/bui`
 submodule, CI workflows can set `SCCACHE_CONF` to
-`$GITHUB_WORKSPACE/ss/cma/cmake/sccache.toml`, run
-`cmake -P ss/cma/cmake/InitializeSccache.cmake`, and pass the exported
+`$GITHUB_WORKSPACE/ss/bui/cmake/sccache.toml`, run
+`cmake -P ss/bui/cmake/InitializeSccache.cmake`, and pass the exported
 `SCCACHE_LAUNCHER` value to both C and C++ `CMAKE_*_COMPILER_LAUNCHER`
 CMake options. The preflight attempts `sccache --zero-stats` up to three
 times to verify daemon connectivity. On failure, it exports an empty

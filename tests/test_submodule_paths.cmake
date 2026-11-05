@@ -4,9 +4,9 @@ include("${CMAKE_CURRENT_LIST_DIR}/../cmake/DependencyChecks.cmake")
 set(_fixture "${CMAKE_CURRENT_BINARY_DIR}/ariadne-submodule-path-test")
 file(MAKE_DIRECTORY "${_fixture}")
 file(WRITE "${_fixture}/.gitmodules"
-    "[submodule \"cma\"]\n"
-    "  path = ss/cma\n"
-    "  url = https://github.com/ariadne-cps/cmake\n"
+    "[submodule \"bui\"]\n"
+    "  path = ss/bui\n"
+    "  url = https://github.com/ariadne-cps/build\n"
     "[submodule \"ss/mac\"]\n"
     "  path = ss/mac\n"
     "  url = https://github.com/ariadne-cps/macro.git\n"
@@ -17,7 +17,7 @@ file(WRITE "${_fixture}/.gitmodules"
     "  path = ss/tst\n"
     "  url = https://github.com/ariadne-cps/testing.git\n"
 )
-foreach(_case IN ITEMS "cmake|ss/cma" "macro|ss/mac" "utility|ss/utility" "testing|ss/tst")
+foreach(_case IN ITEMS "build|ss/bui" "macro|ss/mac" "utility|ss/utility" "testing|ss/tst")
     string(REPLACE "|" ";" _parts "${_case}")
     list(GET _parts 0 _name)
     list(GET _parts 1 _expected)
@@ -41,4 +41,4 @@ if(NOT _missing STREQUAL "")
     message(FATAL_ERROR "Missing .gitmodules must be optional")
 endif()
 file(REMOVE_RECURSE "${_fixture}")
-message(STATUS "CMake and short submodule resolution passed")
+message(STATUS "Build and short submodule resolution passed")
