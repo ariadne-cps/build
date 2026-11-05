@@ -4,7 +4,7 @@ include(CMakeParseArguments)
 
 function(ariadne_add_python_module)
     set(_options)
-    set(_one_value_args NAME MODULE_SOURCE INTERFACE_TARGET)
+    set(_one_value_args NAME MODULE_SOURCE INTERFACE_TARGET MODULE_IMPORT_NAME)
     set(_multi_value_args
         PRIVATE_INCLUDE_DIRECTORIES
         PRIVATE_LINK_LIBRARIES
@@ -81,6 +81,11 @@ function(ariadne_add_python_module)
     endif()
 
     if(CMAKE_SOURCE_DIR STREQUAL PROJECT_SOURCE_DIR)
+        if(ARIADNE_PY_MODULE_IMPORT_NAME)
+            set(_module_import_name "${ARIADNE_PY_MODULE_IMPORT_NAME}")
+        else()
+            set(_module_import_name "pyariadne")
+        endif()
         get_property(_registered_modules GLOBAL PROPERTY ARIADNE_PYTHON_MODULES)
 
         set(_entry_content "#include \"pybind11.hpp\"\n\n")
@@ -90,7 +95,7 @@ function(ariadne_add_python_module)
         endforeach()
 
         string(APPEND _entry_content
-            "\nPYBIND11_MODULE(pyariadne, module) {\n")
+            "\nPYBIND11_MODULE(${_module_import_name}, module) {\n")
         foreach(_module IN LISTS _registered_modules)
             string(APPEND _entry_content
                 "    ${_module}_module(module);\n")
@@ -122,7 +127,7 @@ endfunction()
 
 function(ariadne_finalize_python_module)
     set(_options)
-    set(_one_value_args NAME INTERFACE_TARGET MODULE_TARGET)
+    set(_one_value_args NAME INTERFACE_TARGET MODULE_TARGET MODULE_IMPORT_NAME)
     cmake_parse_arguments(
         ARIADNE_PY
         "${_options}"
@@ -145,6 +150,11 @@ function(ariadne_finalize_python_module)
         set(_python_module_target "${ARIADNE_PY_MODULE_TARGET}")
     else()
         set(_python_module_target "pyariadne")
+    endif()
+    if(ARIADNE_PY_MODULE_IMPORT_NAME)
+        set(_module_import_name "${ARIADNE_PY_MODULE_IMPORT_NAME}")
+    else()
+        set(_module_import_name "pyariadne")
     endif()
     set(_entry_object_target "${_interface_target}-entry-obj")
 
@@ -180,8 +190,8 @@ function(ariadne_finalize_python_module)
         ${_interface_target}
         ${_module_target}
     )
-    # The Python import name remains pyariadne, irrespective of the
-    # distinct CMake target used in a standalone component build.
+    # Match the extension filename to PYBIND11_MODULE's initialization symbol.
+    # The default remains pyariadne for integrated/aggregated builds.
     set_target_properties(${_python_module_target} PROPERTIES
-        OUTPUT_NAME pyariadne)
+        OUTPUT_NAME "${_module_import_name}")
 endfunction()
