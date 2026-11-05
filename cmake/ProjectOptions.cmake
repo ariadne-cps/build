@@ -1,7 +1,7 @@
 include_guard(GLOBAL)
 
 if(NOT TARGET ariadne-build)
-    add_library(ariadne-cmake INTERFACE)
+    add_library(ariadne-build INTERFACE)
 endif()
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}")
