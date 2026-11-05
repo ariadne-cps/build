@@ -24,10 +24,9 @@ The `GCCCodeCoverage.cmake` and `LLVMCodeCoverage.cmake` modules provide
 compiler-specific coverage implementations; `Uninstall.cmake.in` is the
 template used for uninstalling a project.
 
-`ss/cma` is the canonical checkout path for the `cmake` submodule. Older
-pinned consumers may still use `ss/cfg` and the `ariadne-configuration`
-interface target; `ariadne-cmake` preserves the legacy target to allow
-incremental migration without changing unrelated gitlinks.
+`ss/cma` is the canonical checkout path for the `cmake` submodule.
+The only shared infrastructure target is `ariadne-cmake`; no former
+`ariadne-configuration` compatibility target is provided.
 
 ## CMake use
 

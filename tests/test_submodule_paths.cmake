@@ -40,15 +40,5 @@ _ariadne_resolve_submodule_path("${_without_gitmodules}" "testing" _missing OPTI
 if(NOT _missing STREQUAL "")
     message(FATAL_ERROR "Missing .gitmodules must be optional")
 endif()
-file(MAKE_DIRECTORY "${_fixture}/legacy")
-file(WRITE "${_fixture}/legacy/.gitmodules"
-    "[submodule \"cfg\"]\n"
-    "  path = ss/cfg\n"
-    "  url = https://github.com/ariadne-cps/configuration\n"
-)
-_ariadne_resolve_submodule_path("${_fixture}/legacy" "configuration" _legacy)
-if(NOT _legacy STREQUAL "ss/cfg")
-    message(FATAL_ERROR "Legacy configuration checkout did not resolve")
-endif()
 file(REMOVE_RECURSE "${_fixture}")
-message(STATUS "Short and legacy submodule resolution passed")
+message(STATUS "CMake and short submodule resolution passed")
