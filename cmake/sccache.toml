@@ -1,0 +1,2 @@
+# Allow a full minute for a CI runner to start its local sccache server.
+server_startup_timeout_ms = 60000

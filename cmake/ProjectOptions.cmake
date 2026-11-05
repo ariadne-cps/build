@@ -1,7 +1,14 @@
 include_guard(GLOBAL)
 
+if(NOT TARGET ariadne-cmake)
+    add_library(ariadne-cmake INTERFACE)
+endif()
+
+# Compatibility with older, pinned dependencies while migrating from
+# configuration (ss/cfg) to cmake (ss/cma) without changing their gitlinks.
 if(NOT TARGET ariadne-configuration)
     add_library(ariadne-configuration INTERFACE)
+    target_link_libraries(ariadne-configuration INTERFACE ariadne-cmake)
 endif()
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}")

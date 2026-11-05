@@ -1,6 +1,6 @@
-# Ariadne Configuration
+# Ariadne CMake
 
-Shared **CMake build infrastructure** for the Ariadne C++ repository family.
+Shared **CMake build infrastructure** for the [Ariadne repository structure](https://github.com/ariadne-cps/ariadne/blob/main/doc/structure.md).
 Use this repository as a pinned Git submodule; it provides reusable build
 functions and targets, not a C++ runtime library.
 
@@ -9,6 +9,8 @@ functions and targets, not a C++ runtime library.
 | Module | Functions or macros | Purpose |
 | --- | --- | --- |
 | `ProjectOptions.cmake` | `setup_project`, `enable_project_options`, `check_project_compiler`, `configure_library_kind`, `report_python_configuration_once` | C++20 compiler options, warnings, shared/static library choices, common project targets and sanitizers. |
+| `InitializeSccache.cmake` | Optional compiler-cache preflight | Checks the sccache daemon before compilation, with direct compiler fallback if startup fails. |
+| `sccache.toml` | `server_startup_timeout_ms` | Configures sccache daemon startup timeout for GitHub Actions. |
 | `DependencyChecks.cmake` | `ensure_submodule_initialized`, `ariadne_add_submodule`, `get_gitlink_commit`, `require_same_dependency_commit` | Resolve submodule paths and validate pinned dependency consistency along different repository chains. |
 | `TestingSupport.cmake` | `ariadne_setup_testing` | Automatically reuse or initialize the declared Testing submodule for standalone tests, with no dependency when absent. |
 | `ProjectLibrarySupport.cmake` | `setup_project_library` | Build the standalone library target from object targets and module dependencies. |
@@ -22,10 +24,15 @@ The `GCCCodeCoverage.cmake` and `LLVMCodeCoverage.cmake` modules provide
 compiler-specific coverage implementations; `Uninstall.cmake.in` is the
 template used for uninstalling a project.
 
+`ss/cma` is the canonical checkout path for the `cmake` submodule. Older
+pinned consumers may still use `ss/cfg` and the `ariadne-configuration`
+interface target; `ariadne-cmake` preserves the legacy target to allow
+incremental migration without changing unrelated gitlinks.
+
 ## CMake use
 
 Projects include `cmake/ProjectOptions.cmake` via their pinned
-`ss/cfg` gitlink and call `setup_project()`. Submodule directories use short
+`ss/cma` gitlink and call `setup_project()`. Submodule directories use short
 checkout codes such as `ss/mac` for `macro`, while CMake dependency checks use
 full logical repository names. `ariadne_add_submodule(macro)` resolves the
 checkout directory from `.gitmodules` and adds the dependency. Both the
@@ -62,7 +69,7 @@ tests.
 For standalone API documentation, after the project targets have been set up:
 
 ```cmake
-include("${PROJECT_SOURCE_DIR}/ss/cfg/cmake/UseDoxygen.cmake")
+include("${PROJECT_SOURCE_DIR}/ss/cma/cmake/UseDoxygen.cmake")
 ariadne_setup_documentation(
   INPUT "${PROJECT_SOURCE_DIR}/include" "${PROJECT_SOURCE_DIR}/src"
 )
@@ -85,3 +92,21 @@ reference while keeping the original Doxygen output unchanged.
 
 The `doc-pdf` target additionally requires a working TeX installation and
 `make`. Documentation targets are defined only for standalone projects.
+
+## Optional sccache in GitHub Actions
+
+The compiler cache is optional. After initializing the pinned `ss/cma`
+submodule, CI workflows can set `SCCACHE_CONF` to
+`$GITHUB_WORKSPACE/ss/cma/cmake/sccache.toml`, run
+`cmake -P ss/cma/cmake/InitializeSccache.cmake`, and pass the exported
+`SCCACHE_LAUNCHER` value to both C and C++ `CMAKE_*_COMPILER_LAUNCHER`
+CMake options. The preflight attempts `sccache --zero-stats` up to three
+times to verify daemon connectivity. On failure, it exports an empty
+launcher and CMake compiles directly.
+
+For resilient workflows, mark the `mozilla-actions/sccache-action`
+setup step `continue-on-error: true` and set
+`SCCACHE_IGNORE_SERVER_IO_ERROR=1` so sccache falls back to the local
+compiler if the server becomes unreachable during compilation. The
+compiler and test exit codes remain authoritative; only cache failures
+are tolerated.

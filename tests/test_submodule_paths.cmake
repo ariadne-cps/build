@@ -4,9 +4,9 @@ include("${CMAKE_CURRENT_LIST_DIR}/../cmake/DependencyChecks.cmake")
 set(_fixture "${CMAKE_CURRENT_BINARY_DIR}/ariadne-submodule-path-test")
 file(MAKE_DIRECTORY "${_fixture}")
 file(WRITE "${_fixture}/.gitmodules"
-    "[submodule \"cfg\"]\n"
-    "  path = ss/cfg\n"
-    "  url = https://github.com/ariadne-cps/configuration\n"
+    "[submodule \"cma\"]\n"
+    "  path = ss/cma\n"
+    "  url = https://github.com/ariadne-cps/cmake\n"
     "[submodule \"ss/mac\"]\n"
     "  path = ss/mac\n"
     "  url = https://github.com/ariadne-cps/macro.git\n"
@@ -17,7 +17,7 @@ file(WRITE "${_fixture}/.gitmodules"
     "  path = ss/tst\n"
     "  url = https://github.com/ariadne-cps/testing.git\n"
 )
-foreach(_case IN ITEMS "configuration|ss/cfg" "macro|ss/mac" "utility|ss/utility" "testing|ss/tst")
+foreach(_case IN ITEMS "cmake|ss/cma" "macro|ss/mac" "utility|ss/utility" "testing|ss/tst")
     string(REPLACE "|" ";" _parts "${_case}")
     list(GET _parts 0 _name)
     list(GET _parts 1 _expected)
@@ -39,6 +39,16 @@ file(MAKE_DIRECTORY "${_without_gitmodules}")
 _ariadne_resolve_submodule_path("${_without_gitmodules}" "testing" _missing OPTIONAL)
 if(NOT _missing STREQUAL "")
     message(FATAL_ERROR "Missing .gitmodules must be optional")
+endif()
+file(MAKE_DIRECTORY "${_fixture}/legacy")
+file(WRITE "${_fixture}/legacy/.gitmodules"
+    "[submodule \"cfg\"]\n"
+    "  path = ss/cfg\n"
+    "  url = https://github.com/ariadne-cps/configuration\n"
+)
+_ariadne_resolve_submodule_path("${_fixture}/legacy" "configuration" _legacy)
+if(NOT _legacy STREQUAL "ss/cfg")
+    message(FATAL_ERROR "Legacy configuration checkout did not resolve")
 endif()
 file(REMOVE_RECURSE "${_fixture}")
 message(STATUS "Short and legacy submodule resolution passed")
