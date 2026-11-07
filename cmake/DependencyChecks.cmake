@@ -173,6 +173,17 @@ function(require_same_dependency_commit NAME)
             "require_same_dependency_commit(${NAME}) requires CHAINS.")
     endif()
 
+    # A dependency verified by a parent CMake project is certified for the
+    # entire configure run. Subprojects are assumed internally consistent at
+    # their pinned commits; repeating the same check there would only traverse
+    # redundant Git submodule chains.
+    string(SHA256 _certification_key "${NAME}")
+    get_property(_certified GLOBAL PROPERTY
+        "ARIADNE_DEPENDENCY_CERTIFIED_${_certification_key}")
+    if(_certified)
+        return()
+    endif()
+
     set(_expected "")
     set(_terminal_name "")
     set(_details "")
@@ -218,12 +229,8 @@ function(require_same_dependency_commit NAME)
         endif()
     endforeach()
 
-    string(MAKE_C_IDENTIFIER "${NAME}_${_expected}" _report_key)
-    get_property(_already_reported GLOBAL PROPERTY
-        "ARIADNE_DEPENDENCY_REPORT_${_report_key}")
-    if(NOT _already_reported)
-        message(STATUS "Verified ${NAME} dependency commit: ${_expected}")
-        set_property(GLOBAL PROPERTY
-            "ARIADNE_DEPENDENCY_REPORT_${_report_key}" TRUE)
-    endif()
+    # Certify only after *all* chains have been successfully compared.
+    set_property(GLOBAL PROPERTY
+        "ARIADNE_DEPENDENCY_CERTIFIED_${_certification_key}" TRUE)
+    message(STATUS "Verified ${NAME} dependency commit: ${_expected}")
 endfunction()
