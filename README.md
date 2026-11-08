@@ -12,10 +12,11 @@ functions and targets, not a C++ runtime library.
 | `InitializeSccache.cmake` | Optional compiler-cache preflight | Checks the sccache daemon before compilation, with direct compiler fallback if startup fails. |
 | `sccache.toml` | `server_startup_timeout_ms` | Configures sccache daemon startup timeout for GitHub Actions. |
 | `DependencyChecks.cmake` | `ensure_submodule_initialized`, `ariadne_add_submodule`, `get_gitlink_commit`, `require_same_dependency_commit` | Resolve submodule paths and validate pinned dependency consistency along different repository chains. |
-| `TestingSupport.cmake` | `ariadne_setup_testing` | Automatically reuse or initialize the declared Testing submodule for standalone tests, with no dependency when absent. |
+| `TestingSupport.cmake` | `ariadne_setup_testing` | Optionally initialize Testing only for standalone test targets. |
+| `BenchmarkingSupport.cmake` | `ariadne_setup_benchmarking` | Optionally initialize Benchmarking for standalone projects; Benchmarking registers the aggregate `benchmarks` target and the root `benchmarks/` directory. |
 | `ProjectLibrarySupport.cmake` | `setup_project_library` | Build the standalone library target from object targets and module dependencies. |
 | `InstallBundleSupport.cmake` | `ariadne_register_public_headers`, `ariadne_install_dependency_bundle` | Register and install public header bundles, including reachable project dependencies. |
-| `CoverageSupport.cmake` | `enable_project_coverage`, `setup_project_coverage`, `setup_project_tests`, `setup_standalone_project_tests`, `setup_project_benchmarks` | Standalone test/benchmark setup and code coverage, using GCC/lcov or LLVM tools. |
+| `CoverageSupport.cmake` | `enable_project_coverage`, `setup_project_coverage`, `setup_project_tests`, `setup_standalone_project` | Standalone test/benchmark setup and code coverage, using GCC/lcov or LLVM tools. |
 | `PythonBindingSupport.cmake` | `ariadne_add_python_module`, `ariadne_finalize_python_module` | Configure and finalize Python binding modules. |
 | `UninstallSupport.cmake` | `setup_project_uninstall` | Create a project uninstall target. |
 | `UseDoxygen.cmake` | `ariadne_setup_documentation` | Define `doc`, `doxygen`, `doc-html`, `doc-markdown`, and optionally `doc-pdf`. |
@@ -40,7 +41,7 @@ To use the in-house Testing framework, register it only for standalone
 test builds:
 
 ```cmake
-setup_standalone_project_tests(
+setup_standalone_project(
   TARGET ariadne-utility
   TEST_DIRECTORY tests
   TEST_TARGET tests
@@ -52,7 +53,13 @@ When the project declares a `testing` Git submodule, standalone test
 configuration initializes its pinned gitlink automatically and exposes
 the existing `ariadne-testing` static target. If a Testing target already
 exists, it is reused. Projects without a Testing submodule continue
-using their own CTest tests, without fetching Testing. Individual tests can simply link it:
+using their own CTest tests, without fetching Testing. Benchmarking is independent:
+when the root declares `benchmarking` as a Git submodule, the standalone setup
+loads it independently of Testing. The `benchmarking` repository creates the
+`benchmarks` aggregate and registers the root project\x27s `benchmarks/`
+subdirectory if present. Build no longer creates that target or registers
+benchmarks itself; consumers that stay pinned to older Build commits are
+unaffected. Individual tests can simply link it:
 
 ```cmake
 target_link_libraries(test_example PRIVATE ariadne-utility utility ariadne-testing)
