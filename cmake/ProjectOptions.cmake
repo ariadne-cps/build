@@ -103,6 +103,10 @@ macro(configure_library_kind)
 endmacro()
 
 macro(setup_project)
+    # Teach Ninja/Make to reconfigure when a pulled superproject changes
+    # its pinned submodule revisions, including in nested Ariadne projects.
+    ariadne_watch_git_index()
+
     option(COVERAGE "Enable coverage reporting" OFF)
     option(THREAD_SANITIZER "Enable ThreadSanitizer" OFF)
 

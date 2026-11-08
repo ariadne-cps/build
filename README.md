@@ -27,6 +27,35 @@ template used for uninstalling a project.
 `ss/bui` is the canonical checkout path for the `build` submodule.
 The only shared build-infrastructure target is `ariadne-build`.
 
+## Pinned submodules during incremental builds
+
+`setup_project()` registers the current project's Git index as a CMake
+configuration dependency (including when the project is itself a nested
+submodule or Git linked worktree). After a superproject `git pull` or
+checkout changes pinned gitlinks, an ordinary
+`cmake --build <build-dir> --target benchmarks` causes CMake/Ninja or
+Make to reconfigure first. During reconfiguration,
+`ariadne_add_submodule()` aligns declared dependencies with the
+**recorded gitlink commits**, never remote branch tips. This also applies
+to ordinary library and test targets.
+
+When a submodule checkout is already on the correct commit, it is left
+unchanged. When the checkout differs from the pinned commit, a dirty
+worktree (including untracked files) causes a clear configure error
+instead of a silent checkout. Submodules not yet initialized can be
+initialized normally. Nested submodule dependencies are checked at their
+respective CMake project configuration levels. The repository must have a
+Git checkout; source archives without `.git` work as before.
+
+This does **not** run `git pull`, automatically advance pinned commits,
+or reconfigure for uncommitted gitlink changes without an index update.
+As before, the initial `ss/bui` bootstrap in a project's root
+`CMakeLists.txt` runs before Build's CMake helpers are available.
+For emergency manual recovery, use
+`git submodule update --init --recursive`, reviewing local modifications
+first. A fresh CMake configure remains required after switching build
+generators or changing configuration options.
+
 ## CMake use
 
 Projects include `cmake/ProjectOptions.cmake` via their pinned

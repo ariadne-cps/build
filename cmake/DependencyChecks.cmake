@@ -85,6 +85,36 @@ function(_ariadne_resolve_submodule_path REPOSITORY NAME OUTPUT_VARIABLE)
     set(${OUTPUT_VARIABLE} "${_path}" PARENT_SCOPE)
 endfunction()
 
+# Register the Git index as a configure dependency of this CMake
+# project. A plain `git pull` or `git checkout` changing pinned gitlinks
+# updates the index, so cmake --build (including --target benchmarks) first
+# reruns CMake and lets ariadne_add_submodule resolve the recorded commits.
+# Never follow remote branches: only the superproject's pinned gitlinks.
+# rev-parse --git-path works for ordinary checkouts and linked worktrees.
+function(ariadne_watch_git_index)
+    if(NOT EXISTS "${PROJECT_SOURCE_DIR}/.git")
+        return()
+    endif()
+    execute_process(
+        COMMAND "${GIT_EXECUTABLE}" -C "${PROJECT_SOURCE_DIR}"
+                rev-parse --git-path index
+        OUTPUT_VARIABLE _index_path
+        OUTPUT_STRIP_TRAILING_WHITESPACE
+        ERROR_VARIABLE _index_error
+        RESULT_VARIABLE _index_result
+    )
+    if(NOT _index_result EQUAL 0 OR _index_path STREQUAL "")
+        message(FATAL_ERROR
+            "Cannot locate the Git index for ${PROJECT_SOURCE_DIR}: ${_index_error}")
+    endif()
+    if(NOT IS_ABSOLUTE "${_index_path}")
+        get_filename_component(_index_path "${_index_path}" ABSOLUTE
+            BASE_DIR "${PROJECT_SOURCE_DIR}")
+    endif()
+    set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS
+        "${_index_path}")
+endfunction()
+
 function(_ariadne_ensure_submodule_initialized REPOSITORY NAME OUTPUT_DIRECTORY)
     _ariadne_resolve_submodule_path("${REPOSITORY}" "${NAME}" _path)
 
@@ -100,7 +130,37 @@ function(_ariadne_ensure_submodule_initialized REPOSITORY NAME OUTPUT_DIRECTORY)
             "Cannot inspect submodule ${REPOSITORY}/${_path}: ${_status_error}")
     endif()
 
+    if(_status MATCHES "^U")
+        message(FATAL_ERROR
+            "Cannot align conflicted submodule ${REPOSITORY}/${_path};"
+            " resolve the Git index conflict first.")
+    endif()
+
     if(_status MATCHES "^[-+]")
+        # Never replace a populated checkout with outstanding local changes,
+        # even when Git might be able to switch commits without overwriting
+        # their contents. Nested submodule gitlinks are checked separately.
+        if(_status MATCHES "^\\+")
+            execute_process(
+                COMMAND "${GIT_EXECUTABLE}" -C "${REPOSITORY}/${_path}"
+                        status --porcelain --untracked-files=all
+                        --ignore-submodules=all
+                OUTPUT_VARIABLE _dirty
+                OUTPUT_STRIP_TRAILING_WHITESPACE
+                ERROR_VARIABLE _dirty_error
+                RESULT_VARIABLE _dirty_result
+            )
+            if(NOT _dirty_result EQUAL 0)
+                message(FATAL_ERROR
+                    "Cannot inspect local changes in ${REPOSITORY}/${_path}: ${_dirty_error}")
+            endif()
+            if(NOT _dirty STREQUAL "")
+                message(FATAL_ERROR
+                    "Submodule ${REPOSITORY}/${_path} has local changes and"
+                    " is not at the recorded commit. Commit/stash them"
+                    " before rebuilding; automatic checkout is disabled.")
+            endif()
+        endif()
         execute_process(
             COMMAND "${GIT_EXECUTABLE}" -C "${REPOSITORY}"
                     submodule update --init -- "${_path}"
@@ -109,9 +169,10 @@ function(_ariadne_ensure_submodule_initialized REPOSITORY NAME OUTPUT_DIRECTORY)
         )
         if(NOT _update_result EQUAL 0)
             message(FATAL_ERROR
-                "Cannot initialize submodule ${REPOSITORY}/${_path}: ${_update_error}")
+                "Cannot align submodule ${REPOSITORY}/${_path}: ${_update_error}")
         endif()
-        message(STATUS "Initialized submodule ${REPOSITORY}/${_path}")
+        message(STATUS "Aligned submodule ${REPOSITORY}/${_path}"
+            " to its recorded commit")
     endif()
 
     set(${OUTPUT_DIRECTORY} "${REPOSITORY}/${_path}" PARENT_SCOPE)
