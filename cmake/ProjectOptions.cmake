@@ -10,6 +10,7 @@ include(CMakeParseArguments)
 include(CoverageSupport)
 include(DependencyChecks)
 include(TestingSupport)
+include(BenchmarkingSupport)
 include(UninstallSupport)
 include(ProjectLibrarySupport)
 include(InstallBundleSupport)
@@ -103,8 +104,7 @@ macro(configure_library_kind)
 endmacro()
 
 macro(setup_project)
-    # Teach Ninja/Make to reconfigure when a pulled superproject changes
-    # its pinned submodule revisions, including in nested Ariadne projects.
+    # Gitlink edits on pull/checkout trigger CMake regeneration before builds.
     ariadne_watch_git_index()
 
     option(COVERAGE "Enable coverage reporting" OFF)
@@ -124,10 +124,9 @@ macro(setup_project)
         add_link_options(-fsanitize=thread)
     endif()
     if(CMAKE_SOURCE_DIR STREQUAL PROJECT_SOURCE_DIR)
-        add_custom_target(benchmarks)
         add_custom_target(bindings)
         add_custom_target(everything)
-        add_dependencies(everything benchmarks bindings)
+        add_dependencies(everything bindings)
 
         enable_project_coverage()
         setup_project_uninstall()

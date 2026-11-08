@@ -17,12 +17,6 @@ macro(enable_project_coverage)
     endif()
 endmacro()
 
-macro(setup_project_benchmarks)
-    if(EXISTS "${PROJECT_SOURCE_DIR}/benchmarks/CMakeLists.txt")
-        add_subdirectory("${PROJECT_SOURCE_DIR}/benchmarks" EXCLUDE_FROM_ALL)
-    endif()
-endmacro()
-
 function(setup_project_coverage)
     if(NOT COVERAGE)
         return()
@@ -102,62 +96,64 @@ function(setup_project_coverage)
     endif()
 endfunction()
 
-macro(setup_standalone_project_tests)
+# Configure standalone tests and, independently, the optional Benchmarking
+# support declared by the root repository. Testing and Benchmarking are never
+# dependencies of production targets.
+macro(setup_standalone_project)
     if(CMAKE_SOURCE_DIR STREQUAL PROJECT_SOURCE_DIR)
-    set(options EXCLUDE_FROM_ALL)
-    set(oneValueArgs TARGET TEST_DIRECTORY TEST_TARGET EXCLUDE_REGEX)
-    set(multiValueArgs SOURCES TEST_BUILD_DEPENDENCIES COVERAGE_TARGETS MODULE_REPORTS)
-    cmake_parse_arguments(TEST_SETUP
-        "${options}" "${oneValueArgs}" "${multiValueArgs}" ${ARGN})
+        set(options EXCLUDE_FROM_ALL)
+        set(oneValueArgs TARGET TEST_DIRECTORY TEST_TARGET EXCLUDE_REGEX)
+        set(multiValueArgs SOURCES TEST_BUILD_DEPENDENCIES COVERAGE_TARGETS MODULE_REPORTS)
+        cmake_parse_arguments(STANDALONE
+            "${options}" "${oneValueArgs}" "${multiValueArgs}" ${ARGN})
 
-    if(NOT TEST_SETUP_TARGET)
-        message(FATAL_ERROR "setup_standalone_project_tests requires TARGET.")
-    endif()
-    if(NOT TEST_SETUP_TEST_DIRECTORY)
-        message(FATAL_ERROR "setup_standalone_project_tests requires TEST_DIRECTORY.")
-    endif()
-    if(NOT TEST_SETUP_TEST_TARGET)
-        message(FATAL_ERROR "setup_standalone_project_tests requires TEST_TARGET.")
-    endif()
+        # The Benchmarking repository owns the 'benchmarks' aggregate target
+        # and registers the root project's benchmarks/ when that directory exists.
+        # A project without Benchmarking still configures its tests normally.
+        ariadne_setup_benchmarking()
 
-    enable_testing()
+        if(STANDALONE_TEST_DIRECTORY)
+            if(NOT STANDALONE_TARGET)
+                message(FATAL_ERROR "setup_standalone_project requires TARGET when tests are requested.")
+            endif()
+            if(NOT STANDALONE_TEST_TARGET)
+                message(FATAL_ERROR "setup_standalone_project requires TEST_TARGET when tests are requested.")
+            endif()
 
-    # Reuse an existing Testing target, or initialize its pinned submodule
-    # when declared. Projects without Testing still support ordinary CTest.
-    ariadne_setup_testing()
+            enable_testing()
+            ariadne_setup_testing()
 
-    if(TEST_SETUP_EXCLUDE_FROM_ALL)
-        add_subdirectory("${TEST_SETUP_TEST_DIRECTORY}" EXCLUDE_FROM_ALL)
-    else()
-        add_subdirectory("${TEST_SETUP_TEST_DIRECTORY}")
-    endif()
+            if(STANDALONE_EXCLUDE_FROM_ALL)
+                add_subdirectory("${STANDALONE_TEST_DIRECTORY}" EXCLUDE_FROM_ALL)
+            else()
+                add_subdirectory("${STANDALONE_TEST_DIRECTORY}")
+            endif()
 
-    if(NOT TARGET ${TEST_SETUP_TEST_TARGET})
-        message(FATAL_ERROR
-            "Test directory '${TEST_SETUP_TEST_DIRECTORY}' did not create target '${TEST_SETUP_TEST_TARGET}'.")
-    endif()
+            if(NOT TARGET ${STANDALONE_TEST_TARGET})
+                message(FATAL_ERROR
+                    "Test directory '${STANDALONE_TEST_DIRECTORY}' did not create target '${STANDALONE_TEST_TARGET}'.")
+            endif()
 
-    if(TEST_SETUP_TEST_BUILD_DEPENDENCIES)
-        add_dependencies(${TEST_SETUP_TEST_TARGET} ${TEST_SETUP_TEST_BUILD_DEPENDENCIES})
-    endif()
+            if(STANDALONE_TEST_BUILD_DEPENDENCIES)
+                add_dependencies(${STANDALONE_TEST_TARGET} ${STANDALONE_TEST_BUILD_DEPENDENCIES})
+            endif()
+            add_dependencies(everything ${STANDALONE_TARGET} ${STANDALONE_TEST_TARGET})
 
-    add_dependencies(everything
-        ${TEST_SETUP_TARGET}
-        ${TEST_SETUP_TEST_TARGET}
-    )
-    setup_project_benchmarks()
-
-    setup_project_coverage(
-        TARGET ${TEST_SETUP_TARGET}
-        TEST_TARGET ${TEST_SETUP_TEST_TARGET}
-        SOURCES ${TEST_SETUP_SOURCES}
-        COVERAGE_TARGETS ${TEST_SETUP_COVERAGE_TARGETS}
-        MODULE_REPORTS ${TEST_SETUP_MODULE_REPORTS}
-        EXCLUDE_REGEX "${TEST_SETUP_EXCLUDE_REGEX}"
-    )
+            setup_project_coverage(
+                TARGET ${STANDALONE_TARGET}
+                TEST_TARGET ${STANDALONE_TEST_TARGET}
+                SOURCES ${STANDALONE_SOURCES}
+                COVERAGE_TARGETS ${STANDALONE_COVERAGE_TARGETS}
+                MODULE_REPORTS ${STANDALONE_MODULE_REPORTS}
+                EXCLUDE_REGEX "${STANDALONE_EXCLUDE_REGEX}"
+            )
+        elseif(STANDALONE_TARGET OR STANDALONE_TEST_TARGET
+               OR STANDALONE_TEST_BUILD_DEPENDENCIES OR STANDALONE_COVERAGE_TARGETS)
+            message(FATAL_ERROR
+                "setup_standalone_project requires TEST_DIRECTORY for test configuration.")
+        endif()
     endif()
 endmacro()
-
 
 macro(setup_project_tests)
     if(CMAKE_SOURCE_DIR STREQUAL PROJECT_SOURCE_DIR)
@@ -183,7 +179,7 @@ macro(setup_project_tests)
             ${_project_library_target}
             tests
         )
-        setup_project_benchmarks()
+        ariadne_setup_benchmarking()
 
         setup_project_coverage(
             TARGET ${_project_library_target}
