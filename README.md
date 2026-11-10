@@ -44,9 +44,9 @@ These standalone-project targets check only the caller's Git-tracked `.cpp` and
 `.hpp` files under `include/`, `src/`, and `python/bindings/`. The `.hpp` rule
 also covers `.tpl.hpp` and `.inc.hpp`, and includes top-level umbrella headers.
 Nested submodules and untracked files are not modified. The style is read from
-the caller's pinned `ss/bui/.clang-format`. Install clang-format **18** before
-running either target; by default it looks for `clang-format-18` or an unversioned
-`clang-format` that reports version 18. To use a nonstandard executable path, set
+the caller's pinned `ss/bui/.clang-format`. Install clang-format **23** before
+running either target; by default it looks for `clang-format-23` or an unversioned
+`clang-format` that reports version 23. To use a nonstandard executable path, set
 `ARIADNE_CLANG_FORMAT_EXECUTABLE` when configuring with CMake.
 
 ## Auxiliary dependency isolation

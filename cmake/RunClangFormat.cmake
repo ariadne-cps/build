@@ -21,10 +21,10 @@ if(DEFINED ARIADNE_CLANG_FORMAT_EXECUTABLE AND
    NOT "${ARIADNE_CLANG_FORMAT_EXECUTABLE}" STREQUAL "")
     set(_formatter "${ARIADNE_CLANG_FORMAT_EXECUTABLE}")
 else()
-    find_program(_formatter NAMES clang-format-18 clang-format)
+    find_program(_formatter NAMES clang-format-23 clang-format)
 endif()
 if(NOT _formatter)
-    message(FATAL_ERROR "clang-format 18 is required for ${ARIADNE_FORMAT_MODE}-format")
+    message(FATAL_ERROR "clang-format 23 is required for ${ARIADNE_FORMAT_MODE}-format")
 endif()
 execute_process(
     COMMAND "${_formatter}" --version
@@ -34,8 +34,8 @@ execute_process(
 if(NOT _version_result EQUAL 0 OR NOT _version_output MATCHES "version ([0-9]+)")
     message(FATAL_ERROR "Cannot determine clang-format version: ${_version_output} ${_version_error}")
 endif()
-if(NOT CMAKE_MATCH_1 EQUAL 18)
-    message(FATAL_ERROR "clang-format version 18 required, got: ${_version_output}")
+if(NOT CMAKE_MATCH_1 EQUAL 23)
+    message(FATAL_ERROR "clang-format version 23 required, got: ${_version_output}")
 endif()
 
 execute_process(
