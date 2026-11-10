@@ -9,7 +9,7 @@ function(_ariadne_direct_cpp_dependencies OUTPUT)
         set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS "${_gitmodules}")
         execute_process(
             COMMAND "${GIT_EXECUTABLE}" config --file "${_gitmodules}"
-                    --get-regexp "^submodule\..*\.url$"
+                    --get-regexp "^submodule[.].*[.]url$"
             OUTPUT_VARIABLE _urls OUTPUT_STRIP_TRAILING_WHITESPACE
             RESULT_VARIABLE _status)
         if(NOT _status EQUAL 0)
@@ -19,7 +19,7 @@ function(_ariadne_direct_cpp_dependencies OUTPUT)
         foreach(_line IN LISTS _lines)
             if(_line MATCHES "^[^ \t]+[ \t]+(.+)$")
                 set(_url "${CMAKE_MATCH_1}")
-                string(REGEX REPLACE "\.git/?$" "" _url "${_url}")
+                string(REGEX REPLACE "[.]git/?$" "" _url "${_url}")
                 string(REGEX REPLACE "/+$" "" _url "${_url}")
                 string(REGEX REPLACE "^.*[/:]" "" _dependency "${_url}")
                 if(_dependency MATCHES "^(build|testing|benchmarking|python-common)$")

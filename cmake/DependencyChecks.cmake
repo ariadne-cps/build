@@ -199,12 +199,19 @@ endfunction()
 # physical checkout directory. Keep a macro so child project() and
 # add_subdirectory() retain the caller's CMake directory scope.
 macro(ariadne_add_submodule NAME)
-    _ariadne_ensure_submodule_initialized(
-        "${PROJECT_SOURCE_DIR}" "${NAME}" _ariadne_submodule_source)
-    get_filename_component(_ariadne_submodule_basename
-        "${_ariadne_submodule_source}" NAME)
-    add_subdirectory("${_ariadne_submodule_source}"
-        "${CMAKE_CURRENT_BINARY_DIR}/${_ariadne_submodule_basename}")
+    # Only the compilation root may select an auxiliary Testing or
+    # Benchmarking checkout. Nested modules cannot override that selection.
+    if(("${NAME}" STREQUAL "testing" OR "${NAME}" STREQUAL "benchmarking")
+       AND NOT CMAKE_SOURCE_DIR STREQUAL PROJECT_SOURCE_DIR)
+        message(VERBOSE "Ignoring nested auxiliary submodule '${NAME}'")
+    else()
+        _ariadne_ensure_submodule_initialized(
+            "${PROJECT_SOURCE_DIR}" "${NAME}" _ariadne_submodule_source)
+        get_filename_component(_ariadne_submodule_basename
+            "${_ariadne_submodule_source}" NAME)
+        add_subdirectory("${_ariadne_submodule_source}"
+            "${CMAKE_CURRENT_BINARY_DIR}/${_ariadne_submodule_basename}")
+    endif()
 endmacro()
 
 function(get_gitlink_commit REPOSITORY SUBMODULE_PATH OUTPUT_VARIABLE)
