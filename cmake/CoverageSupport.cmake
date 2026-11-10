@@ -137,7 +137,6 @@ macro(setup_standalone_project)
             if(STANDALONE_TEST_BUILD_DEPENDENCIES)
                 add_dependencies(${STANDALONE_TEST_TARGET} ${STANDALONE_TEST_BUILD_DEPENDENCIES})
             endif()
-            add_dependencies(everything ${STANDALONE_TARGET} ${STANDALONE_TEST_TARGET})
 
             setup_project_coverage(
                 TARGET ${STANDALONE_TARGET}
@@ -175,10 +174,6 @@ macro(setup_project_tests)
             message(FATAL_ERROR "Test directory 'test' did not create target 'tests'.")
         endif()
 
-        add_dependencies(everything
-            ${_project_library_target}
-            tests
-        )
         ariadne_setup_benchmarking()
 
         setup_project_coverage(

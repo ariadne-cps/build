@@ -2,6 +2,7 @@ include_guard(GLOBAL)
 
 find_package(Git REQUIRED)
 include(CMakeParseArguments)
+include(DependencySnapshot)
 
 # OPTIONAL returns an empty path when the logical submodule is not declared;
 # mandatory callers retain their existing strict failure behavior.
@@ -209,17 +210,15 @@ endmacro()
 function(get_gitlink_commit REPOSITORY SUBMODULE_PATH OUTPUT_VARIABLE)
     execute_process(
         COMMAND "${GIT_EXECUTABLE}" -C "${REPOSITORY}"
-                rev-parse "HEAD:${SUBMODULE_PATH}"
-        OUTPUT_VARIABLE _commit
-        OUTPUT_STRIP_TRAILING_WHITESPACE
-        ERROR_VARIABLE _error
-        RESULT_VARIABLE _result
-    )
-    if(NOT _result EQUAL 0 OR _commit STREQUAL "")
+                ls-files --stage -- "${SUBMODULE_PATH}"
+        OUTPUT_VARIABLE _entry OUTPUT_STRIP_TRAILING_WHITESPACE
+        ERROR_VARIABLE _error RESULT_VARIABLE _result)
+    if(NOT _result EQUAL 0 OR NOT _entry MATCHES "^160000 ([0-9a-fA-F]+) 0[\t ]")
         message(FATAL_ERROR
-            "Cannot determine gitlink for ${REPOSITORY}/${SUBMODULE_PATH}: ${_error}")
+            "Cannot determine a unique staged Gitlink for ${REPOSITORY}/${SUBMODULE_PATH}: "
+            "${_error} ${_entry}")
     endif()
-    set(${OUTPUT_VARIABLE} "${_commit}" PARENT_SCOPE)
+    set(${OUTPUT_VARIABLE} "${CMAKE_MATCH_1}" PARENT_SCOPE)
 endfunction()
 
 function(require_same_dependency_commit NAME)
@@ -234,16 +233,26 @@ function(require_same_dependency_commit NAME)
             "require_same_dependency_commit(${NAME}) requires CHAINS.")
     endif()
 
-    # A dependency verified by a parent CMake project is certified for the
-    # entire configure run. Subprojects are assumed internally consistent at
-    # their pinned commits; repeating the same check there would only traverse
-    # redundant Git submodule chains.
-    string(SHA256 _certification_key "${NAME}")
+    if(NOT EXISTS "${PROJECT_SOURCE_DIR}/.git")
+        return()
+    endif()
+
+    # Do not certify a wider chain set from a narrower prior check.
+    string(SHA256 _certification_key
+        "${PROJECT_SOURCE_DIR}|${NAME}|${CHECK_CHAINS}")
     get_property(_certified GLOBAL PROPERTY
         "ARIADNE_DEPENDENCY_CERTIFIED_${_certification_key}")
     if(_certified)
         return()
     endif()
+    _ariadne_dependency_cache_matches("${_certification_key}" _cached)
+    if(_cached)
+        set_property(GLOBAL PROPERTY
+            "ARIADNE_DEPENDENCY_CERTIFIED_${_certification_key}" TRUE)
+        message(STATUS "Reused verified ${NAME} Gitlink constraints")
+        return()
+    endif()
+    set(_checked_gitlinks)
 
     set(_expected "")
     set(_terminal_name "")
@@ -269,9 +278,10 @@ function(require_same_dependency_commit NAME)
         set(_repository "${PROJECT_SOURCE_DIR}")
         set(_index 0)
         foreach(_token IN LISTS _tokens)
+            _ariadne_resolve_submodule_path(
+                "${_repository}" "${_token}" _path)
+            list(APPEND _checked_gitlinks "${_repository}|${_path}")
             if(_index EQUAL _last_index)
-                _ariadne_resolve_submodule_path(
-                    "${_repository}" "${_token}" _path)
                 get_gitlink_commit("${_repository}" "${_path}" _commit)
             else()
                 _ariadne_ensure_submodule_initialized(
@@ -290,6 +300,7 @@ function(require_same_dependency_commit NAME)
         endif()
     endforeach()
 
+    _ariadne_dependency_cache_record("${_certification_key}" ${_checked_gitlinks})
     # Certify only after *all* chains have been successfully compared.
     set_property(GLOBAL PROPERTY
         "ARIADNE_DEPENDENCY_CERTIFIED_${_certification_key}" TRUE)
