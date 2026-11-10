@@ -41,8 +41,9 @@ cmake --build <build-directory> --target impose-format
 ```
 
 These standalone-project targets check only the caller's Git-tracked `.cpp` and
-`.hpp` files under `include/`, `src/`, and `python/bindings/`. The `.hpp` rule
-also covers `.tpl.hpp` and `.inc.hpp`, and includes top-level umbrella headers.
+`.hpp` files under `include/`, `src/`, `python/bindings/`, `tests/`,
+`benchmarks/`, and `tutorial/`. The `.hpp` rule also covers `.tpl.hpp`
+and `.inc.hpp`, and includes top-level umbrella headers.
 Nested submodules and untracked files are not modified. The style is read from
 the caller's pinned `ss/bui/.clang-format`. Install clang-format **23** before
 running either target; by default it looks for `clang-format-23` or an unversioned

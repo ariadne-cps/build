@@ -40,7 +40,7 @@ endif()
 
 execute_process(
     COMMAND "${_ariadne_git}" -C "${ARIADNE_FORMAT_ROOT}"
-        -c core.quotePath=false ls-files --cached -- include src python/bindings
+        -c core.quotePath=false ls-files --cached -- include src python/bindings tests benchmarks tutorial
     RESULT_VARIABLE _git_result
     OUTPUT_VARIABLE _tracked_files
     ERROR_VARIABLE _git_error)
@@ -53,7 +53,7 @@ string(REPLACE ";" "\\;" _tracked_files "${_tracked_files}")
 string(REPLACE "\n" ";" _tracked_files "${_tracked_files}")
 set(_selected_files)
 foreach(_path IN LISTS _tracked_files)
-    if(_path MATCHES "^(include|src|python/bindings)/.+[.](cpp|hpp)$" AND
+    if(_path MATCHES "^(include|src|python/bindings|tests|benchmarks|tutorial)/.+[.](cpp|hpp)$" AND
        EXISTS "${ARIADNE_FORMAT_ROOT}/${_path}")
         list(APPEND _selected_files "${ARIADNE_FORMAT_ROOT}/${_path}")
     endif()
