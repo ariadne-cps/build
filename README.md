@@ -12,8 +12,10 @@ functions and targets, not a C++ runtime library.
 | `InitializeSccache.cmake` | Optional compiler-cache preflight | Checks the sccache daemon before compilation, with direct compiler fallback if startup fails. |
 | `sccache.toml` | `server_startup_timeout_ms` | Configures sccache daemon startup timeout for GitHub Actions. |
 | `DependencyChecks.cmake` | `ensure_submodule_initialized`, `ariadne_add_submodule`, `get_gitlink_commit`, `require_same_dependency_commit` | Resolve submodule paths and validate pinned dependency consistency along different repository chains. |
-| `TestingSupport.cmake` | `ariadne_setup_testing` | Optionally initialize Testing only for standalone test targets. |
-| `BenchmarkingSupport.cmake` | `ariadne_setup_benchmarking` | Optionally initialize Benchmarking for standalone projects; Benchmarking registers the aggregate `benchmarks` target and the root `benchmarks/` directory. |
+| `TestingSupport.cmake` | `ariadne_setup_testing` | Select root Testing only for standalone tests; verify its Build Gitlink. |
+| `BenchmarkingSupport.cmake` | `ariadne_setup_benchmarking` | Select root Benchmarking; verify its Build and Logging pins; Benchmarking registers the aggregate `benchmarks` target and the root `benchmarks/` directory. |
+| `ModuleSupport.cmake` | `ariadne_setup_module` | Derive functional C++ dependencies and configure the module's targets. |
+| `DependencySnapshot.cmake` | Internal snapshot cache | Reuse exact-chain Gitlink verifications when the relevant pins are unchanged. |
 | `ProjectLibrarySupport.cmake` | `setup_project_library` | Build the standalone library target from object targets and module dependencies. |
 | `InstallBundleSupport.cmake` | `ariadne_register_public_headers`, `ariadne_install_dependency_bundle` | Register and install public header bundles, including reachable project dependencies. |
 | `CoverageSupport.cmake` | `enable_project_coverage`, `setup_project_coverage`, `setup_project_tests`, `setup_standalone_project` | Standalone test/benchmark setup and code coverage, using GCC/lcov or LLVM tools. |
@@ -27,6 +29,17 @@ template used for uninstalling a project.
 
 `ss/bui` is the canonical checkout path for the `build` submodule.
 The only shared build-infrastructure target is `ariadne-build`.
+
+## Auxiliary dependency isolation
+
+Only direct functional submodules are linked by `ariadne_setup_module(NAME)`.
+Build, Testing, Benchmarking and PythonCommon are excluded from production
+link interfaces. `ariadne_setup_testing()` and
+`ariadne_setup_benchmarking()` select auxiliary submodules only in the root
+project and validate their Build pins; the latter also validates its Logging
+pin against the active Logging module. A nested module must never initialize
+its own auxiliary checkout. Tests and benchmark executables link their own
+auxiliary support explicitly.
 
 ## Pinned submodules during incremental builds
 

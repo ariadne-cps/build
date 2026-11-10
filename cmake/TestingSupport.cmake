@@ -11,6 +11,8 @@ macro(ariadne_setup_testing)
         _ariadne_resolve_submodule_path(
             "${PROJECT_SOURCE_DIR}" "testing" _ariadne_testing_path OPTIONAL)
         if(NOT _ariadne_testing_path STREQUAL "")
+            require_same_dependency_commit(Build CHAINS
+                "build" "testing|build")
             ariadne_add_submodule(testing)
         endif()
     endif()

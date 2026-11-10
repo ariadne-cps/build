@@ -240,7 +240,32 @@ function(require_same_dependency_commit NAME)
             "require_same_dependency_commit(${NAME}) requires CHAINS.")
     endif()
 
+    # Check constraints only for the compilation root. Nested repositories
+    # are trusted at their selected pinned commits; their own CMake checks
+    # are intentionally not repeated in an aggregate build.
+    if(NOT CMAKE_SOURCE_DIR STREQUAL PROJECT_SOURCE_DIR)
+        return()
+    endif()
     if(NOT EXISTS "${PROJECT_SOURCE_DIR}/.git")
+        return()
+    endif()
+
+    # Only the compilation root's direct Testing/Benchmarking pin is active.
+    # Legacy chains through a functional child's auxiliary checkout must not
+    # cause the child's Testing or Benchmarking to be initialized or checked.
+    set(_active_chains)
+    foreach(_chain IN LISTS CHECK_CHAINS)
+        string(REPLACE "|" ";" _segments "${_chain}")
+        list(GET _segments 0 _first)
+        list(FIND _segments "testing" _testing_index)
+        list(FIND _segments "benchmarking" _benchmarking_index)
+        if((_testing_index GREATER 0) OR (_benchmarking_index GREATER 0))
+            continue()
+        endif()
+        list(APPEND _active_chains "${_chain}")
+    endforeach()
+    set(CHECK_CHAINS "${_active_chains}")
+    if(NOT CHECK_CHAINS)
         return()
     endif()
 
