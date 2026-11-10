@@ -28,7 +28,26 @@ compiler-specific coverage implementations; `Uninstall.cmake.in` is the
 template used for uninstalling a project.
 
 `ss/bui` is the canonical checkout path for the `build` submodule.
-The only shared build-infrastructure target is `ariadne-build`.
+Shared infrastructure targets also include `check-format` and `impose-format`.
+
+## C++ formatting
+
+`check-format` verifies formatting without modifying files; `impose-format` applies
+the shared style in-place. After configuring the project with CMake:
+
+```sh
+cmake --build <build-directory> --target check-format
+cmake --build <build-directory> --target impose-format
+```
+
+These standalone-project targets check only the caller's Git-tracked `.cpp` and
+`.hpp` files under `include/`, `src/`, and `python/bindings/`. The `.hpp` rule
+also covers `.tpl.hpp` and `.inc.hpp`, and includes top-level umbrella headers.
+Nested submodules and untracked files are not modified. The style is read from
+the caller's pinned `ss/bui/.clang-format`. Install clang-format **18** before
+running either target; by default it looks for `clang-format-18` or an unversioned
+`clang-format` that reports version 18. To use a nonstandard executable path, set
+`ARIADNE_CLANG_FORMAT_EXECUTABLE` when configuring with CMake.
 
 ## Auxiliary dependency isolation
 
