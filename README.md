@@ -28,16 +28,16 @@ compiler-specific coverage implementations; `Uninstall.cmake.in` is the
 template used for uninstalling a project.
 
 `ss/bui` is the canonical checkout path for the `build` submodule.
-Shared infrastructure targets also include `check-format` and `impose-format`.
+Shared infrastructure targets also include `check-format` and `apply-format`.
 
 ## C++ formatting
 
-`check-format` verifies formatting without modifying files; `impose-format` applies
+`check-format` verifies formatting without modifying files; `apply-format` applies
 the shared style in-place. After configuring the project with CMake:
 
 ```sh
 cmake --build <build-directory> --target check-format
-cmake --build <build-directory> --target impose-format
+cmake --build <build-directory> --target apply-format
 ```
 
 These standalone-project targets check only the caller's Git-tracked `.cpp` and

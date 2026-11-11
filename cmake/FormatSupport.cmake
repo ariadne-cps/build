@@ -9,7 +9,7 @@ function(ariadne_setup_format_targets)
         return()
     endif()
 
-    foreach(_mode IN ITEMS check impose)
+    foreach(_mode IN ITEMS check apply)
         if(NOT TARGET ${_mode}-format)
             add_custom_target(${_mode}-format
                 COMMAND "${CMAKE_COMMAND}"

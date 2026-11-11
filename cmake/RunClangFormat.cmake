@@ -5,7 +5,7 @@ foreach(_required IN ITEMS ARIADNE_FORMAT_ROOT ARIADNE_FORMAT_CONFIG ARIADNE_FOR
         message(FATAL_ERROR "Missing ${_required}")
     endif()
 endforeach()
-if(NOT ARIADNE_FORMAT_MODE MATCHES "^(check|impose)$")
+if(NOT ARIADNE_FORMAT_MODE MATCHES "^(check|apply)$")
     message(FATAL_ERROR "Unknown formatting mode: ${ARIADNE_FORMAT_MODE}")
 endif()
 if(NOT EXISTS "${ARIADNE_FORMAT_CONFIG}")
