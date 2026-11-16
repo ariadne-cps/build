@@ -3,6 +3,7 @@ include_guard(GLOBAL)
 find_package(Git REQUIRED)
 include(CMakeParseArguments)
 include(DependencySnapshot)
+include("${CMAKE_CURRENT_LIST_DIR}/SubmoduleCheckout.cmake")
 
 # OPTIONAL returns an empty path when the logical submodule is not declared;
 # mandatory callers retain their existing strict failure behavior.
@@ -87,10 +88,9 @@ function(_ariadne_resolve_submodule_path REPOSITORY NAME OUTPUT_VARIABLE)
 endfunction()
 
 # Register the Git index as a configure dependency of this CMake
-# project. A plain `git pull` or `git checkout` changing pinned gitlinks
-# updates the index, so cmake --build (including --target benchmarks) first
-# reruns CMake and lets ariadne_add_submodule resolve the recorded commits.
-# Never follow remote branches: only the superproject's pinned gitlinks.
+# project. A pull/checkout that changes Gitlinks reruns CMake. The checkout
+# policy in SubmoduleCheckout synchronizes only changed recorded Gitlinks;
+# local dependency HEAD changes are watched separately.
 # rev-parse --git-path works for ordinary checkouts and linked worktrees.
 function(ariadne_watch_git_index)
     if(NOT EXISTS "${PROJECT_SOURCE_DIR}/.git")
@@ -118,65 +118,8 @@ endfunction()
 
 function(_ariadne_ensure_submodule_initialized REPOSITORY NAME OUTPUT_DIRECTORY)
     _ariadne_resolve_submodule_path("${REPOSITORY}" "${NAME}" _path)
-
-    execute_process(
-        COMMAND "${GIT_EXECUTABLE}" -C "${REPOSITORY}" submodule status -- "${_path}"
-        OUTPUT_VARIABLE _status
-        OUTPUT_STRIP_TRAILING_WHITESPACE
-        ERROR_VARIABLE _status_error
-        RESULT_VARIABLE _status_result
-    )
-    if(NOT _status_result EQUAL 0)
-        message(FATAL_ERROR
-            "Cannot inspect submodule ${REPOSITORY}/${_path}: ${_status_error}")
-    endif()
-
-    if(_status MATCHES "^U")
-        message(FATAL_ERROR
-            "Cannot align conflicted submodule ${REPOSITORY}/${_path};"
-            " resolve the Git index conflict first.")
-    endif()
-
-    if(_status MATCHES "^[-+]")
-        # Never replace a populated checkout with outstanding local changes,
-        # even when Git might be able to switch commits without overwriting
-        # their contents. Nested submodule gitlinks are checked separately.
-        if(_status MATCHES "^\\+")
-            execute_process(
-                COMMAND "${GIT_EXECUTABLE}" -C "${REPOSITORY}/${_path}"
-                        status --porcelain --untracked-files=all
-                        --ignore-submodules=all
-                OUTPUT_VARIABLE _dirty
-                OUTPUT_STRIP_TRAILING_WHITESPACE
-                ERROR_VARIABLE _dirty_error
-                RESULT_VARIABLE _dirty_result
-            )
-            if(NOT _dirty_result EQUAL 0)
-                message(FATAL_ERROR
-                    "Cannot inspect local changes in ${REPOSITORY}/${_path}: ${_dirty_error}")
-            endif()
-            if(NOT _dirty STREQUAL "")
-                message(FATAL_ERROR
-                    "Submodule ${REPOSITORY}/${_path} has local changes and"
-                    " is not at the recorded commit. Commit/stash them"
-                    " before rebuilding; automatic checkout is disabled.")
-            endif()
-        endif()
-        execute_process(
-            COMMAND "${GIT_EXECUTABLE}" -C "${REPOSITORY}"
-                    submodule update --init -- "${_path}"
-            ERROR_VARIABLE _update_error
-            RESULT_VARIABLE _update_result
-        )
-        if(NOT _update_result EQUAL 0)
-            message(FATAL_ERROR
-                "Cannot align submodule ${REPOSITORY}/${_path}: ${_update_error}")
-        endif()
-        message(STATUS "Aligned submodule ${REPOSITORY}/${_path}"
-            " to its recorded commit")
-    endif()
-
-    set(${OUTPUT_DIRECTORY} "${REPOSITORY}/${_path}" PARENT_SCOPE)
+    _ariadne_checkout_submodule("${REPOSITORY}" "${_path}" _directory)
+    set(${OUTPUT_DIRECTORY} "${_directory}" PARENT_SCOPE)
 endfunction()
 
 function(ensure_submodule_initialized NAME)
@@ -243,7 +186,11 @@ function(require_same_dependency_commit NAME)
     # Check constraints only for the compilation root. Nested repositories
     # are trusted at their selected pinned commits; their own CMake checks
     # are intentionally not repeated in an aggregate build.
-    if(NOT CMAKE_SOURCE_DIR STREQUAL PROJECT_SOURCE_DIR)
+    # A host project (e.g. arch/examples) may embed Ariadne without making
+    # it the CMake source root. Allow its declared graph-validation root to
+    # perform the same checks as when Ariadne is built standalone.
+    if(NOT CMAKE_SOURCE_DIR STREQUAL PROJECT_SOURCE_DIR
+       AND NOT PROJECT_SOURCE_DIR STREQUAL ARIADNE_DEPENDENCY_VALIDATION_ROOT)
         return()
     endif()
     if(NOT EXISTS "${PROJECT_SOURCE_DIR}/.git")

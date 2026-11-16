@@ -61,34 +61,37 @@ pin against the active Logging module. A nested module must never initialize
 its own auxiliary checkout. Tests and benchmark executables link their own
 auxiliary support explicitly.
 
-## Pinned submodules during incremental builds
+## Submodule synchronization during incremental builds
 
-`setup_project()` registers the current project's Git index as a CMake
-configuration dependency (including when the project is itself a nested
-submodule or Git linked worktree). After a superproject `git pull` or
-checkout changes pinned gitlinks, an ordinary
-`cmake --build <build-dir> --target benchmarks` causes CMake/Ninja or
-Make to reconfigure first. During reconfiguration,
-`ariadne_add_submodule()` aligns declared dependencies with the
-**recorded gitlink commits**, never remote branch tips. This also applies
-to ordinary library and test targets.
+`setup_project()` watches the current project's Git index, including linked
+Git worktrees. An ordinary `cmake --build <build-dir>` triggers reconfiguration
+after a parent pull or checkout updates a registered Gitlink. Each dependency
+checkout's Git HEAD is watched as well, so selecting another commit manually
+reconfigures the build without silently resetting it.
 
-When a submodule checkout is already on the correct commit, it is left
-unchanged. When the checkout differs from the pinned commit, a dirty
-worktree (including untracked files) causes a clear configure error
-instead of a silent checkout. Submodules not yet initialized can be
-initialized normally. Nested submodule dependencies are checked at their
-respective CMake project configuration levels. The repository must have a
-Git checkout; source archives without `.git` work as before.
+`ariadne_add_submodule()` initializes a missing checkout at its recorded
+Gitlink. For an initialized checkout, it remembers the last observed parent
+Gitlink in **local, worktree-specific Git metadata** (independent of CMake's
+build directory). When that Gitlink changes, it synchronizes the dependency
+to the new recorded commit. Otherwise it preserves the current HEAD, including
+an intentional checkout of another commit. A first observation of an already
+initialized checkout adopts the recorded Gitlink without altering its HEAD.
+Changes to a dependency may themselves change its nested Gitlinks; those
+are handled in turn by the same rule.
 
-This does **not** run `git pull`, automatically advance pinned commits,
-or reconfigure for uncommitted gitlink changes without an index update.
-As before, the initial `ss/bui` bootstrap in a project's root
-`CMakeLists.txt` runs before Build's CMake helpers are available.
-For emergency manual recovery, use
-`git submodule update --init --recursive`, reviewing local modifications
-first. A fresh CMake configure remains required after switching build
-generators or changing configuration options.
+If synchronization is necessary, tracked modifications and untracked files
+in the dependency block checkout with an explicit error; they are never
+overwritten. No remote branches are followed or pulled automatically.
+Explicit `git submodule update` commands remain under Git's own semantics.
+The `ss/bui` bootstrap of the Build helpers itself remains separately pinned.
+
+Cross-branch `require_same_dependency_commit()` comparisons remain strict:
+incompatible recorded commits along shared dependency chains still fail,
+including chains introduced by a locally selected dependency version.
+A host project embedding Ariadne can set `ARIADNE_DEPENDENCY_VALIDATION_ROOT`
+to Ariadne's source directory before `add_subdirectory` so Ariadne performs
+its root graph validation in an aggregate build. Other nested libraries
+continue relying on the graph root's certified constraints.
 
 ## CMake use
 
