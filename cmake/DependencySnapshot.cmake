@@ -17,10 +17,22 @@ function(_ariadne_dependency_snapshot OUTPUT)
             set(${OUTPUT} "" PARENT_SCOPE)
             return()
         endif()
+        # An override may change the nested Gitlinks of this repository,
+        # without changing the parent's recorded Gitlink. Cache validation
+        # must depend on the checkout that is actually being examined.
+        _ariadne_watch_submodule_head("${_repo}")
+        execute_process(
+            COMMAND "${GIT_EXECUTABLE}" -C "${_repo}" rev-parse HEAD
+            OUTPUT_VARIABLE _head OUTPUT_STRIP_TRAILING_WHITESPACE
+            ERROR_VARIABLE _error RESULT_VARIABLE _result)
+        if(NOT _result EQUAL 0 OR _head STREQUAL "")
+            set(${OUTPUT} "" PARENT_SCOPE)
+            return()
+        endif()
         get_gitlink_commit("${_repo}" "${_submodule_path}" _gitlink)
         file(SHA256 "${_repo}/.gitmodules" _mapping_hash)
         string(APPEND _fingerprint
-            "${_repo}|${_mapping_hash}|${_submodule_path}|${_gitlink}\n")
+            "${_repo}|${_head}|${_mapping_hash}|${_submodule_path}|${_gitlink}\n")
     endforeach()
     string(SHA256 _hash "${_fingerprint}")
     set(${OUTPUT} "${_hash}" PARENT_SCOPE)
