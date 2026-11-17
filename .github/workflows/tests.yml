@@ -1,0 +1,46 @@
+name: Tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  tests:
+    name: Tests (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+
+    steps:
+      - name: Check out Build
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Show tool versions
+        run: |
+          cmake --version
+          git --version
+          python --version
+
+      - name: Test logical submodule path resolution
+        run: cmake -P tests/test_submodule_paths.cmake
+
+      - name: Test incremental submodule synchronization
+        run: cmake -P tests/test_submodule_checkout.cmake
+
+      - name: Test initial checkout observations
+        run: python tests/test_submodule_checkout.py
+
+      - name: Test public documentation XML filtering
+        run: python -m unittest discover -s tests -p test_doc_markdown.py -v

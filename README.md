@@ -1,8 +1,28 @@
 # Ariadne Build
 
+[![Tests](https://github.com/ariadne-cps/build/actions/workflows/tests.yml/badge.svg?branch=main)](https://github.com/ariadne-cps/build/actions/workflows/tests.yml?query=branch%3Amain)
+
 Shared **CMake build infrastructure** for the [Ariadne repository structure](https://github.com/ariadne-cps/ariadne/blob/main/doc/structure.md).
 Use this repository as a pinned Git submodule; it provides reusable build
 functions and targets, not a C++ runtime library.
+
+## Running the tests
+
+The [Tests workflow](https://github.com/ariadne-cps/build/actions/workflows/tests.yml)
+runs on pushes to `main`, pull requests and manual dispatch, on Ubuntu,
+macOS and Windows. It covers two CMake Git-submodule regression scripts and
+two Python checkout/documentation tests. No Ariadne C++ build or recursive
+dependency checkout is necessary.
+
+Run the same checks locally from the Build repository root (Git, CMake and
+Python 3.11 or newer required):
+
+```sh
+cmake -P tests/test_submodule_paths.cmake
+cmake -P tests/test_submodule_checkout.cmake
+python3 tests/test_submodule_checkout.py
+python3 -m unittest discover -s tests -p test_doc_markdown.py -v
+```
 
 ## Modules and functions
 
