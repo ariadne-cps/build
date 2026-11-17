@@ -17,6 +17,7 @@ include(ProjectLibrarySupport)
 include(InstallBundleSupport)
 include(PythonBindingSupport)
 include(ModuleSupport)
+include(MaterializationSupport)
 
 function(enable_project_options)
     set(CMAKE_MACOSX_RPATH 1 PARENT_SCOPE)
@@ -118,6 +119,7 @@ macro(setup_project)
 
     enable_project_options()
     ariadne_setup_format_targets()
+    ariadne_setup_materialization_target()
 
     if(THREAD_SANITIZER AND CMAKE_SOURCE_DIR STREQUAL PROJECT_SOURCE_DIR)
         if(WIN32 OR NOT CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang|AppleClang")

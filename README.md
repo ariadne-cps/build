@@ -30,6 +30,29 @@ template used for uninstalling a project.
 `ss/bui` is the canonical checkout path for the `build` submodule.
 Shared infrastructure targets also include `check-format` and `apply-format`.
 
+## Inspecting active submodule materializations
+
+After CMake configuration, inspect the exact checkout selected for each logical
+dependency in the current build:
+
+```sh
+cmake --build <build-directory> --target list-materializations
+```
+
+Each line reports the logical repository name, absolute source checkout path,
+and **current HEAD commit**. The list includes the Build submodule providing
+the active CMake helpers, functional dependencies, and root-selected auxiliary
+dependencies such as Testing or Benchmarking. It follows the submodules
+actually added to the CMake build: a nested checkout initialized solely for
+Gitlink consistency checking, or an unused duplicate under another dependency,
+is not an active materialization and is not reported.
+
+The target is read-only: it does not compile, initialize, update, or check out
+submodules. Paths are captured during configuration; HEADs are inspected at
+target execution time, so manual dependency commit selections are visible.
+A changed dependency graph requires normal CMake regeneration before the list
+is refreshed.
+
 ## C++ formatting
 
 `check-format` verifies formatting without modifying files; `apply-format` applies

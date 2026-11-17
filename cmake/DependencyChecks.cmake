@@ -150,6 +150,7 @@ macro(ariadne_add_submodule NAME)
     else()
         _ariadne_ensure_submodule_initialized(
             "${PROJECT_SOURCE_DIR}" "${NAME}" _ariadne_submodule_source)
+        ariadne_register_materialization("${NAME}" "${_ariadne_submodule_source}")
         get_filename_component(_ariadne_submodule_basename
             "${_ariadne_submodule_source}" NAME)
         add_subdirectory("${_ariadne_submodule_source}"
