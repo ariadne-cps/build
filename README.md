@@ -97,8 +97,19 @@ Gitlink. For an initialized checkout, it remembers the last observed parent
 Gitlink in **local, worktree-specific Git metadata** (independent of CMake's
 build directory). When that Gitlink changes, it synchronizes the dependency
 to the new recorded commit. Otherwise it preserves the current HEAD, including
-an intentional checkout of another commit. A first observation of an already
-initialized checkout adopts the recorded Gitlink without altering its HEAD.
+an intentional checkout of another commit. On a first observation, if the checkout is still at the immediately previous
+Gitlink of the parent (according to the parent's Git reflog), CMake recognizes
+the pull/checkout and aligns it to the new Gitlink. This inference is used only
+when the parent's current HEAD and staged Gitlink agree. If the parent history
+is unavailable or the checkout differs from that previous Gitlink, CMake
+preserves the checkout **without recording the ambiguous observation**. A
+subsequent explicit `git submodule update --init` can establish alignment.
+For an intentional override that must survive even this first-observation
+inference, configure with
+`-DARIADNE_PRESERVE_INITIAL_SUBMODULE_CHECKOUTS=ON`; this explicitly accepts
+the selected checkout as an override. This option applies to all submodules
+without a saved observation in that configuration.
+
 Changes to a dependency may themselves change its nested Gitlinks; those
 are handled in turn by the same rule.
 
@@ -115,6 +126,9 @@ A host project embedding Ariadne can set `ARIADNE_DEPENDENCY_VALIDATION_ROOT`
 to Ariadne's source directory before `add_subdirectory` so Ariadne performs
 its root graph validation in an aggregate build. Other nested libraries
 continue relying on the graph root's certified constraints.
+
+The synchronization regression fixtures can be run with
+`python3 tests/test_submodule_checkout.py` (requires Git and CMake).
 
 ## CMake use
 
