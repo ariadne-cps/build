@@ -2,7 +2,7 @@ include_guard(GLOBAL)
 
 find_package(Git REQUIRED)
 include(CMakeParseArguments)
-include(DependencySnapshot)
+include("${CMAKE_CURRENT_LIST_DIR}/DependencySnapshot.cmake")
 include("${CMAKE_CURRENT_LIST_DIR}/SubmoduleCheckout.cmake")
 
 # OPTIONAL returns an empty path when the logical submodule is not declared;
